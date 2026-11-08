@@ -63,6 +63,7 @@ __attribute__((visibility("default"))) std::vector<Monitor> Monitors();
 __attribute__((visibility("default"))) void CursorScreenPos(int *x, int *y);
 __attribute__((visibility("default"))) bool IsFullscreen(HWND hWnd);
 __attribute__((visibility("default"))) void SetFullscreen(HWND hWnd, bool fullscreen);
+__attribute__((visibility("default"))) void FullscreenSize(int *w, int *h);
 __attribute__((visibility("default"))) void SetMinClientSize(HWND hWnd, int w, int h);
 
 __attribute__((visibility("default"))) bool PumpEvents(bool wait);

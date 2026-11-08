@@ -25,7 +25,9 @@ static void GetModes(std::vector<D3DDISPLAYMODE> &out)
 	});
 	CGDisplayModeRef cur = CGDisplayCopyDisplayMode(CGMainDisplayID());
 	if (!cur) return;
-	D3DDISPLAYMODE native = {(UINT)CGDisplayModeGetPixelWidth(cur), (UINT)CGDisplayModeGetPixelHeight(cur), (UINT)CGDisplayModeGetRefreshRate(cur), D3DFMT_X8R8G8B8};
+	int fw, fh;
+	oplat::FullscreenSize(&fw, &fh);
+	D3DDISPLAYMODE native = {(UINT)fw, (UINT)fh, (UINT)CGDisplayModeGetRefreshRate(cur), D3DFMT_X8R8G8B8};
 	if (!native.RefreshRate) native.RefreshRate = 60;
 	CGDisplayModeRelease(cur);
 	out.erase(std::remove_if(out.begin(), out.end(), [&](const D3DDISPLAYMODE &m) {

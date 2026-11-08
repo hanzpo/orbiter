@@ -162,21 +162,21 @@ void ApplyCursorVisibility()
 @interface OPWindow : NSWindow
 @property (nonatomic, assign) BOOL keyable;
 @property (nonatomic, assign) BOOL pendingFullScreen;
-@property (nonatomic, assign) BOOL addedResizable;
+@property (nonatomic, assign) BOOL fixedSize;
+@property (nonatomic, assign) BOOL inFullScreenTransition;
 @end
+
+static NSSize FullscreenPoints(NSScreen *screen)
+{
+	NSSize sz = screen.frame.size;
+	if (@available(macOS 12.0, *)) sz.height -= screen.safeAreaInsets.top;
+	return sz;
+}
 
 bool g_headless = false;
 
 @implementation OPWindow
 - (BOOL)canBecomeKeyWindow { return self.keyable || [super canBecomeKeyWindow]; }
-- (void)toggleFullScreen:(id)sender
-{
-	if (!(self.styleMask & NSWindowStyleMaskFullScreen) && !(self.styleMask & NSWindowStyleMaskResizable)) {
-		self.styleMask |= NSWindowStyleMaskResizable;
-		self.addedResizable = YES;
-	}
-	[super toggleFullScreen:sender];
-}
 - (void)orderWindow:(NSWindowOrderingMode)place relativeTo:(NSInteger)other
 {
 	if (g_headless && place != NSWindowOut) return;
@@ -413,17 +413,30 @@ bool g_headless = false;
 
 - (void)windowWillStartLiveResize:(NSNotification *)n { Dispatch(self.owner, WM_ENTERSIZEMOVE, 0, 0); }
 - (void)windowDidEndLiveResize:(NSNotification *)n { Dispatch(self.owner, WM_EXITSIZEMOVE, 0, 0); }
-- (void)windowDidEnterFullScreen:(NSNotification *)n { self.owner->fullscreen = true; }
+- (void)setTransition:(NSNotification *)n active:(BOOL)active
+{
+	if ([n.object isKindOfClass:[OPWindow class]]) ((OPWindow *)n.object).inFullScreenTransition = active;
+}
+- (void)windowWillEnterFullScreen:(NSNotification *)n { [self setTransition:n active:YES]; }
+- (void)windowWillExitFullScreen:(NSNotification *)n { [self setTransition:n active:YES]; }
+- (void)windowDidFailToEnterFullScreen:(NSWindow *)w { if ([w isKindOfClass:[OPWindow class]]) ((OPWindow *)w).inFullScreenTransition = NO; }
+- (void)windowDidFailToExitFullScreen:(NSWindow *)w { if ([w isKindOfClass:[OPWindow class]]) ((OPWindow *)w).inFullScreenTransition = NO; }
+- (void)windowDidEnterFullScreen:(NSNotification *)n
+{
+	[self setTransition:n active:NO];
+	self.owner->fullscreen = true;
+}
 - (void)windowDidExitFullScreen:(NSNotification *)n
 {
+	[self setTransition:n active:NO];
 	self.owner->fullscreen = false;
-	if ([n.object isKindOfClass:[OPWindow class]]) {
-		OPWindow *w = (OPWindow *)n.object;
-		if (w.addedResizable) {
-			w.styleMask &= ~NSWindowStyleMaskResizable;
-			w.addedResizable = NO;
-		}
-	}
+}
+- (NSSize)windowWillResize:(NSWindow *)w toSize:(NSSize)size
+{
+	if (![w isKindOfClass:[OPWindow class]]) return size;
+	OPWindow *ow = (OPWindow *)w;
+	if (!ow.fixedSize || ow.inFullScreenTransition || (w.styleMask & NSWindowStyleMaskFullScreen)) return size;
+	return w.frame.size;
 }
 
 @end
@@ -513,13 +526,15 @@ HWND OpenWindow(const WindowDesc &d)
 	h->user = d.userData;
 	@autoreleasepool {
 		NSWindowStyleMask style = d.borderless ? NSWindowStyleMaskBorderless :
-			(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | (d.resizable ? NSWindowStyleMaskResizable : 0));
+			(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable);
 		NSScreen *screen = NSScreen.mainScreen;
 		NSRect vis = screen.visibleFrame;
 		CGFloat s = screen.backingScaleFactor;
 		NSRect content = NSMakeRect(0, 0, d.width / s, d.height / s);
+		if (d.fullscreen && !d.borderless) content.size = FullscreenPoints(screen);
 		OPWindow *w = [[OPWindow alloc] initWithContentRect:content styleMask:style backing:NSBackingStoreBuffered defer:NO];
 		w.keyable = d.borderless;
+		w.fixedSize = !d.resizable && !d.borderless;
 		w.releasedWhenClosed = NO;
 		w.title = [NSString stringWithUTF8String:d.title.c_str()];
 		w.acceptsMouseMovedEvents = YES;
@@ -707,6 +722,14 @@ void CursorScreenPos(int *x, int *y)
 }
 
 bool IsFullscreen(HWND hWnd) { return hWnd && hWnd->fullscreen; }
+
+void FullscreenSize(int *w, int *h)
+{
+	NSScreen *screen = NSScreen.mainScreen;
+	NSSize sz = FullscreenPoints(screen);
+	*w = (int)lround(sz.width * screen.backingScaleFactor);
+	*h = (int)lround(sz.height * screen.backingScaleFactor);
+}
 
 void SetFullscreen(HWND hWnd, bool fullscreen)
 {
