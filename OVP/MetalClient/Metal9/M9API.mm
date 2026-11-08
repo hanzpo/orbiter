@@ -23,6 +23,15 @@ static void GetModes(std::vector<D3DDISPLAYMODE> &out)
 	std::sort(out.begin(), out.end(), [](const D3DDISPLAYMODE &a, const D3DDISPLAYMODE &b) {
 		return a.Width != b.Width ? a.Width < b.Width : a.Height != b.Height ? a.Height < b.Height : a.RefreshRate < b.RefreshRate;
 	});
+	CGDisplayModeRef cur = CGDisplayCopyDisplayMode(CGMainDisplayID());
+	if (!cur) return;
+	D3DDISPLAYMODE native = {(UINT)CGDisplayModeGetPixelWidth(cur), (UINT)CGDisplayModeGetPixelHeight(cur), (UINT)CGDisplayModeGetRefreshRate(cur), D3DFMT_X8R8G8B8};
+	if (!native.RefreshRate) native.RefreshRate = 60;
+	CGDisplayModeRelease(cur);
+	out.erase(std::remove_if(out.begin(), out.end(), [&](const D3DDISPLAYMODE &m) {
+		return m.Width == native.Width && m.Height == native.Height && m.RefreshRate == native.RefreshRate;
+	}), out.end());
+	out.insert(out.begin(), native);
 }
 
 IDirect3D9 *Direct3DCreate9(UINT)
