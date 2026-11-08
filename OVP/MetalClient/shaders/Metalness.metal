@@ -34,8 +34,8 @@ vertex PBRData MetalnessVS(MESH_VERTEX vrt [[stage_in]], constant Globals &g [[b
 //
 float BeckmanNDF(float dHN, float rgh)
 {
-	float r2 = rgh*rgh;
-	float dHN2 = dHN*dHN;
+	float r2 = max(rgh*rgh, 1e-4f);
+	float dHN2 = max(dHN*dHN, 1e-4f);
 	float2 w = 1.0f / float2(3.14f * r2 * dHN2*dHN2, r2*dHN2);
 	return w.x * exp((dHN2 - 1.0f) * w.y);
 }
@@ -119,7 +119,7 @@ void Transmittance(constant Globals &g, texture2d<float> gTransmMap, texture2d<f
 	if (g.gCfg.Transl) cTransl = gTranslMap.sample(TranslS, uv).rgb;
 
 	float sunLightFromBehind = saturate(-uLN);
-	float sunSpotFromBehind = saturate(pow(saturate(-uLC), cTransm.a) * 3.0f);
+	float sunSpotFromBehind = saturate(pow(max(saturate(-uLC), 1e-9f), cTransm.a) * 3.0f);
 
 	cDiff.rgb += (1.0f - cDiff.rgb) * cTransl.rgb * saturate(cSun * sunLightFromBehind);
 	cDiff.rgb += cTransm.rgb * (sunSpotFromBehind * cSun);
@@ -231,7 +231,7 @@ fragment float4 MetalnessPS(PBRData frg [[stage_in]], constant Globals &g [[buff
 	float dCN = saturate(dot(camW, nrmW));
 	float dHN = saturate(dot(hlvW, nrmW));
 
-	fSmth = pow(abs(fSmth), g.gMtrl.roughness.y) * g.gMtrl.roughness.x;
+	fSmth = pow(max(abs(fSmth), 1e-9f), g.gMtrl.roughness.y) * g.gMtrl.roughness.x;
 
 	fSmth = fSmth + ((1.0f - fSmth) * pow(abs(1.0f - dCN), 4.0f)) * pow(abs(fSmth), 0.5f);
 
@@ -289,7 +289,7 @@ fragment float4 MetalnessPS(PBRData frg [[stage_in]], constant Globals &g [[buff
 
 	float3 cSpec = mix(cDiff.rgb, float3(1.0f, 1.0f, 1.0f), (1.0f - fMetal) * (1.0f - fRgh3));
 
-	float fFrs = pow(1.0f - dCN, fRgh*2.5f + 2.5f);
+	float fFrs = pow(max(1.0f - dCN, 1e-9f), fRgh*2.5f + 2.5f);
 
 	fFrs *= saturate(0.3f - fRgh*fRgh) * 3.3f;
 

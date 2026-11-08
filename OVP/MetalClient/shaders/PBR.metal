@@ -211,9 +211,9 @@ fragment float4 PBR_PS(PBRData frg [[stage_in]], constant Globals &g [[buffer(0)
 
 		float dCN = saturate(dot(CamD, nrmW));
 
-		fFrsl = pow(1.0f - dCN, g.gMtrl.fresnel.x);
+		fFrsl = pow(max(1.0f - dCN, 1e-9f), g.gMtrl.fresnel.x);
 
-		fFLbe = pow(dRS, g.gMtrl.fresnel.z) * dLNx * float(any(cRefl != 0.0f));
+		fFLbe = pow(max(dRS, 1e-9f), g.gMtrl.fresnel.z) * dLNx * float(any(cRefl != 0.0f));
 
 		cFrsl *= g.gMtrl.fresnel.y;
 
@@ -228,7 +228,7 @@ fragment float4 PBR_PS(PBRData frg [[stage_in]], constant Globals &g [[buffer(0)
 	// Compute a specular and diffuse lighting
 	// ----------------------------------------------------------------------
 
-	float fLobe = pow(dRS, cSpec.a) * dLNx;
+	float fLobe = pow(max(dRS, 1e-9f), cSpec.a) * dLNx;
 
 
 	// ----------------------------------------------------------------------
@@ -440,7 +440,7 @@ fragment float4 FAST_PS(FASTData frg [[stage_in]], constant Globals &g [[buffer(
 
 		float3 CamD = normalize(frg.camW);
 		float3 HlfW = normalize(CamD - g.gSun.Dir);
-		float  fSun = pow(saturate(dot(HlfW, nrmW)), g.gMtrl.specular.a);
+		float  fSun = pow(max(saturate(dot(HlfW, nrmW)), 1e-9f), g.gMtrl.specular.a);
 
 #if SHDMAP > 0
 		fSun *= fShadow;

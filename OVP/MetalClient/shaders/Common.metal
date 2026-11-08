@@ -71,7 +71,7 @@ void LocalLights(
 	float4 att;
 	for (i = 0; i < 4; i++) att[i] = dot(g.gLights[i + x].attenuation.xyz, float3(1.0f, dst[i], dst[i] * dst[i]));
 
-	att = 1.0f / att;
+	att = 1.0f / max(att, float4(1e-20f));
 
 	float4 spt;
 	for (i = 0; i < 4; i++) {
@@ -91,7 +91,7 @@ void LocalLights(
 
 		for (i = 0; i < 4; i++) spe[i] = dot(reflect(p[i], nrmW), posWN) * float(dif[i] > 0);
 
-		spe = pow(saturate(spe), float4(sp));
+		spe = pow(max(saturate(spe), float4(1e-9f)), float4(sp));
 		spe *= (att * spt);
 	}
 
@@ -151,7 +151,7 @@ void LocalLightsBeckman(
 	float4 att;
 	for (i = 0; i < 4; i++) att[i] = dot(g.gLights[i + x].attenuation.xyz, float3(1.0f, dst[i], dst[i] * dst[i]));
 
-	att = 1.0f / att;
+	att = 1.0f / max(att, float4(1e-20f));
 
 	float4 spt;
 	for (i = 0; i < 4; i++) {
@@ -168,8 +168,8 @@ void LocalLightsBeckman(
 
 	if (bSpec) {
 
-		float r2 = fRgh * fRgh;
-		float4 d2 = dHN * dHN;
+		float r2 = max(fRgh * fRgh, 1e-4f);
+		float4 d2 = max(dHN * dHN, float4(1e-4f));
 		float4 w = 1.0f / (3.14f * r2 * d2 * d2);
 		float4 q = 1.0f / (r2 * d2);
 
@@ -334,7 +334,7 @@ float ComputeShadow(constant Globals &g, texture2d<float> gShadowMap, float4 shd
 
 	float kr = g.gSHD[0] * KERNEL_RADIUS;
 	float dx = rsqrt(1.0f - dLN * dLN);
-	float ofs = kr / (dLN * dx);
+	float ofs = kr / max(dLN * dx, 1e-6f);
 	float omx = min(0.05f + ofs, 0.5f);
 
 	float  pd = shdH.z + omx * g.gSHD[3];

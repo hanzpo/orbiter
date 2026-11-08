@@ -113,7 +113,7 @@ fragment float4 AdvancedPS(PBRData frg [[stage_in]], constant Globals &g [[buffe
 
 	float fRghn = log2(cSpec.a) * 0.1f;
 
-	float fSun = pow(saturate(-dot(RflW, g.gSun.Dir)), cSpec.a) * saturate(cSpec.a);
+	float fSun = pow(max(saturate(-dot(RflW, g.gSun.Dir)), 1e-9f), cSpec.a) * saturate(cSpec.a);
 
 	if (dLN == 0) fSun = 0.0f;
 
@@ -166,7 +166,7 @@ fragment float4 AdvancedPS(PBRData frg [[stage_in]], constant Globals &g [[buffe
 		}
 
 		float sunLightFromBehind = saturate(dot(g.gSun.Dir, nrmW));
-		float sunSpotFromBehind = pow(saturate(dot(g.gSun.Dir, CamD)), cTransm.a);
+		float sunSpotFromBehind = pow(max(saturate(dot(g.gSun.Dir, CamD)), 1e-9f), cTransm.a);
 		sunSpotFromBehind *= saturate(sunLightFromBehind * 3.0f);
 
 		cTransl.rgb *= saturate(cSun * sunLightFromBehind);
@@ -195,7 +195,7 @@ fragment float4 AdvancedPS(PBRData frg [[stage_in]], constant Globals &g [[buffe
 
 			float  dCN = saturate(dot(CamD, nrmW));
 
-			fFrsl *= pow(1.0f - dCN, g.gMtrl.fresnel.x) * (1.0f - fRefl) * float(any(cRefl != 0.0f));
+			fFrsl *= pow(max(1.0f - dCN, 1e-9f), g.gMtrl.fresnel.x) * (1.0f - fRefl) * float(any(cRefl != 0.0f));
 
 			cSpec.rgb = saturate(cSpec.rgb + fSun * fFrsl * cSun);
 

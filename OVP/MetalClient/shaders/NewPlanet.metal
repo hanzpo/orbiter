@@ -193,7 +193,7 @@ static void LocalLights(constant FlowControlPS &Flow, constant _Light &Lights, c
 	float4 att;
 	for (i = 0; i < 4; i++) att[i] = dot(Lights.attenuation[i].xyz, float3(1.0, dst[i], dst[i] * dst[i]));
 
-	att = 1.0f / att;
+	att = 1.0f / max(att, float4(1e-20f));
 
 	float4 spt = 1;
 
@@ -622,7 +622,8 @@ fragment float4 TerrainPS(TileVS frg [[stage_in]], constant PlanetPSConst &cb [[
 
 	float fM = 0.5f - fMask * 0.25f;
 
-	float3 cA = normalize(cAmb.rgb + cSF * 4.0f) * cAmb.a * cAmb.g * fM * exp(-alt * Const.iH.r) * Const.rmI.r * 6e5 * Const.TW_Terrain;
+	float3 cAv = cAmb.rgb + cSF * 4.0f;
+	float3 cA = cAv * rsqrt(max(dot(cAv, cAv), 1e-20f)) * cAmb.a * cAmb.g * fM * exp(-alt * Const.iH.r) * Const.rmI.r * 6e5 * Const.TW_Terrain;
 
 	fShd = saturate(fShd + (1.0f - fX));
 
