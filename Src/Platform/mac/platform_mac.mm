@@ -162,12 +162,21 @@ void ApplyCursorVisibility()
 @interface OPWindow : NSWindow
 @property (nonatomic, assign) BOOL keyable;
 @property (nonatomic, assign) BOOL pendingFullScreen;
+@property (nonatomic, assign) BOOL addedResizable;
 @end
 
 bool g_headless = false;
 
 @implementation OPWindow
 - (BOOL)canBecomeKeyWindow { return self.keyable || [super canBecomeKeyWindow]; }
+- (void)toggleFullScreen:(id)sender
+{
+	if (!(self.styleMask & NSWindowStyleMaskFullScreen) && !(self.styleMask & NSWindowStyleMaskResizable)) {
+		self.styleMask |= NSWindowStyleMaskResizable;
+		self.addedResizable = YES;
+	}
+	[super toggleFullScreen:sender];
+}
 - (void)orderWindow:(NSWindowOrderingMode)place relativeTo:(NSInteger)other
 {
 	if (g_headless && place != NSWindowOut) return;
@@ -405,7 +414,17 @@ bool g_headless = false;
 - (void)windowWillStartLiveResize:(NSNotification *)n { Dispatch(self.owner, WM_ENTERSIZEMOVE, 0, 0); }
 - (void)windowDidEndLiveResize:(NSNotification *)n { Dispatch(self.owner, WM_EXITSIZEMOVE, 0, 0); }
 - (void)windowDidEnterFullScreen:(NSNotification *)n { self.owner->fullscreen = true; }
-- (void)windowDidExitFullScreen:(NSNotification *)n { self.owner->fullscreen = false; }
+- (void)windowDidExitFullScreen:(NSNotification *)n
+{
+	self.owner->fullscreen = false;
+	if ([n.object isKindOfClass:[OPWindow class]]) {
+		OPWindow *w = (OPWindow *)n.object;
+		if (w.addedResizable) {
+			w.styleMask &= ~NSWindowStyleMaskResizable;
+			w.addedResizable = NO;
+		}
+	}
+}
 
 @end
 
