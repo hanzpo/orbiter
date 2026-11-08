@@ -2065,7 +2065,7 @@ void Vessel::ClearVariableDragElements ()
 
 // ==============================================================
 
-void Vessel::ApplyUserAttitudeControls (DWORD *ctrl)
+void Vessel::ApplyUserAttitudeControls (DWORD *ctrl, const DWORD *kbd)
 {
 	if (bFRplayback) return;
 	// ignore user controls during playback 
@@ -2078,6 +2078,9 @@ void Vessel::ApplyUserAttitudeControls (DWORD *ctrl)
 			IncThrusterGroupOverride (THGROUP_ATT_YAWRIGHT,  0.001*ctrl[THGROUP_ATT_YAWRIGHT]);
 			IncThrusterGroupOverride (THGROUP_ATT_BANKLEFT,  0.001*ctrl[THGROUP_ATT_BANKLEFT]);
 			IncThrusterGroupOverride (THGROUP_ATT_BANKRIGHT, 0.001*ctrl[THGROUP_ATT_BANKRIGHT]);
+			if (kbd)
+				for (int g = THGROUP_ATT_RIGHT; g <= THGROUP_ATT_BACK; g++)
+					if (kbd[g]) IncThrusterGroupOverride ((THGROUP_TYPE)g, 0.001*kbd[g]);
 		} else {            // translational mode
 			IncThrusterGroupOverride (THGROUP_ATT_RIGHT,     0.001*ctrl[THGROUP_ATT_RIGHT]);
 			IncThrusterGroupOverride (THGROUP_ATT_LEFT,      0.001*ctrl[THGROUP_ATT_LEFT]);
@@ -2085,6 +2088,9 @@ void Vessel::ApplyUserAttitudeControls (DWORD *ctrl)
 			IncThrusterGroupOverride (THGROUP_ATT_DOWN,      0.001*ctrl[THGROUP_ATT_DOWN]);
 			IncThrusterGroupOverride (THGROUP_ATT_FORWARD,   0.001*ctrl[THGROUP_ATT_FORWARD]);
 			IncThrusterGroupOverride (THGROUP_ATT_BACK,      0.001*ctrl[THGROUP_ATT_BACK]);
+			if (kbd)
+				for (int g = THGROUP_ATT_PITCHUP; g <= THGROUP_ATT_BANKRIGHT; g++)
+					if (kbd[g]) IncThrusterGroupOverride ((THGROUP_TYPE)g, 0.001*kbd[g]);
 		}
 	}
 

@@ -217,7 +217,8 @@ CFG_UIPRM CfgUIPrm_default = {
 	10,         // MenuScrollspeed (1-20)
 	0,          // SelVesselTab: tab to open in vessel selection dialog
 	4,          // SelVesselRange "nearby" range for vessel selection dialog (100km)
-	false       // bSelVesselFlat (no flat assemblies) in vessel selection dialog)
+	false,      // bSelVesselFlat (no flat assemblies) in vessel selection dialog)
+	1           // KeyPreset (Mac-optimized)
 };
 
 CFG_DEMOPRM CfgDemoPrm_default = {
@@ -758,6 +759,8 @@ bool Config::Load(const char *fname)
 		CfgUIPrm.MenuScrollspeed = (DWORD)i;
 	GetInt (ifs, "SelVesselTab", CfgUIPrm.SelVesselTab);
 	GetInt (ifs, "SelVesselRange", CfgUIPrm.SelVesselRange);
+	if (GetInt (ifs, "KeyPreset", i) && i >= 0 && i <= 2)
+		CfgUIPrm.KeyPreset = i;
 	GetBool (ifs, "SelVesselFlat", CfgUIPrm.bSelVesselFlat);
 
 	// demo parameters
@@ -1319,6 +1322,8 @@ BOOL Config::Write (const char *fname) const
 			ofs << "SelVesselRange = " << CfgUIPrm.SelVesselRange << '\n';
 		if (CfgUIPrm.bSelVesselFlat != CfgUIPrm_default.bSelVesselFlat || bEchoAll)
 			ofs << "SelVesselFlat = " << BoolStr (CfgUIPrm.bSelVesselFlat) << '\n';
+		if (CfgUIPrm.KeyPreset != CfgUIPrm_default.KeyPreset || bEchoAll)
+			ofs << "KeyPreset = " << CfgUIPrm.KeyPreset << '\n';
 	}
 
 	if (memcmp (&CfgDemoPrm, &CfgDemoPrm_default, sizeof(CFG_DEMOPRM)) || bEchoAll) {
