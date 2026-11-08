@@ -1,3 +1,4 @@
+#include <cstring>
 // Copyright (c) 2026 Douglas Beachy
 // Licensed under the MIT License
 
@@ -51,7 +52,7 @@ TEST_CASE("Text with printf codes is logged literally", "[log]")
 	SetLogVerbosity(false);
 	LogOut("module %s, API %06d", "XRSound", 241030);   // with arguments it is still a format
 
-	SetLastError(ERROR_BAD_EXE_FORMAT);   // the system text contains "%1"
+	SetLastError(ENOEXEC);
 	LogOut_LastError("func", "file.cpp", 1);
 	SetLastError(0x20000001);             // no system text for this code
 	LogOut_LastError("func", "file.cpp", 2);
@@ -69,7 +70,7 @@ TEST_CASE("Text with printf codes is logged literally", "[log]")
 	for (size_t pos = text.find(name); pos != std::string::npos; pos = text.find(name, pos + 1)) count++;
 	CHECK(count == 4);
 	CHECK(text.find("module XRSound, API 241030") != std::string::npos);
-	CHECK(text.find("%1") != std::string::npos);
+	CHECK(text.find(strerror(ENOEXEC)) != std::string::npos);
 	CHECK(text.find("Unknown error") != std::string::npos);
 	CHECK(text.find("CWD modified by module Modules\\bad%s%n.dll - Fixing.") != std::string::npos);
 

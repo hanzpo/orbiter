@@ -1,8 +1,6 @@
 # Copyright (c) Martin Schweiger
 # Licensed under the MIT License
 
-# SAFESEH linker flag must be turned off because the DX7 libraries don't support it'
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -SAFESEH:NO")
 FetchContent_MakeAvailable(imgui)
 FetchContent_MakeAvailable(implot)
 
@@ -30,11 +28,10 @@ set(common_src
 	State.cpp
 	Vecmat.cpp
 	VectorMap.cpp
-    ConsoleManager.cpp
 	TimeData.cpp
 # Launchpad
 	Launchpad.cpp
-	LpadTab.cpp
+	LaunchpadRenderer.mm
 	TabAbout.cpp
 	TabExtra.cpp
 	TabModule.cpp
@@ -42,8 +39,6 @@ set(common_src
 	TabScenario.cpp
 	TabVideo.cpp
 # Dialogs
-	CustomControls.cpp
-	DialogWin.cpp
 	DlgCamera.cpp
 	DlgCapture.cpp
 	DlgFocus.cpp
@@ -56,9 +51,7 @@ set(common_src
 	DlgOptions.cpp
 	DlgRecorder.cpp
 	DlgTacc.cpp
-	htmlctrl.c
 	Select.cpp
-	OptionsPages.cpp
 # Body classes
 	Body.cpp
 	BodyIntegrator.cpp
@@ -108,18 +101,15 @@ set(common_src
 	ModuleAPI.cpp
 	OrbiterAPI.cpp
 # Graphics utils
-	D3d7util.cpp
 	D3dmath.cpp
-	Di7frame.cpp
 # Utils
 	Log.cpp
 	Memstat.cpp
 	Util.cpp
 	ZTreeMgr.cpp
-# Resources
-	Orbiter.rc
-	Orbiter.ico
-	${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+# ImGui platform and renderer backends
+	imgui_impl_orbiter.cpp
+	${imgui_SOURCE_DIR}/backends/imgui_impl_metal.mm
 )
 
 set(Orbiter_includes
@@ -127,63 +117,72 @@ set(Orbiter_includes
 	${CMAKE_SOURCE_DIR}/Orbitersdk/include
 	${CMAKE_SOURCE_DIR}/OVP
 	${CMAKE_CURRENT_BINARY_DIR}
-	${HTMLHELP_INCLUDE_DIR}
 )
 
 set(Orbiter_common_libs
-	Winmm.dll
-	comctl32.lib
-	UxTheme.lib
-	version.lib
-	${HTML_HELP_LIBRARY}
 	zlib
-	${HTMLHELP_LIB}
-	$<TARGET_FILE:Orbitersdk>
-	$<TARGET_FILE:DlgCtrl>
+	Orbitersdk
+	OrbiterPlatform
 )
 set(Orbiter_libs
-	dxguid.lib
-	dinput8.lib
 )
 
 set(Orbiter_depends
 	Orbitersdk
-	DlgCtrl
 )
 
-# Orbiter executable (graphics server version)
-add_executable(Orbiter ${common_src})
+add_library(OrbiterCore SHARED ${common_src})
 
-set_target_properties(Orbiter
+set_target_properties(OrbiterCore
 	PROPERTIES
-	LINK_FLAGS "/SUBSYSTEM:CONSOLE /ENTRY:WinMainCRTStartup"
-	RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_ROOT_DIR}
-	OUTPUT_NAME Orbiter
-	VS_DEBUGGER_WORKING_DIRECTORY ${ORBITER_BINARY_ROOT_DIR}
-	COMPILE_DEFINITIONS "NOGRAPHICS;DIRECTINPUT_VERSION=0x0800"
+	LIBRARY_OUTPUT_DIRECTORY ${ORBITER_BINARY_ROOT_DIR}
+	INSTALL_NAME_DIR "@rpath"
 	FOLDER Core
 )
 
-target_include_directories(Orbiter PUBLIC ${Orbiter_includes} ${TRACY_CLIENT_INCLUDE} ${imgui_SOURCE_DIR}/ ${imgui_SOURCE_DIR}/backends ${implot_SOURCE_DIR}/)
+target_include_directories(OrbiterCore PUBLIC ${Orbiter_includes} ${TRACY_CLIENT_INCLUDE} ${imgui_SOURCE_DIR}/ ${imgui_SOURCE_DIR}/backends ${implot_SOURCE_DIR}/)
+target_link_libraries(OrbiterCore ${Orbiter_common_libs} ${Orbiter_libs} ${TRACY_CLIENT})
+target_compile_options(OrbiterCore PRIVATE "$<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>")
+set_property(SOURCE ${imgui_SOURCE_DIR}/backends/imgui_impl_metal.mm PROPERTY COMPILE_OPTIONS "-fobjc-arc")
+add_dependencies(OrbiterCore ${Orbiter_depends})
 
-target_link_libraries(Orbiter ${Orbiter_common_libs} ${Orbiter_libs} ${TRACY_CLIENT})
-
-add_dependencies(Orbiter ${Orbiter_depends})
-
-# Installation: Orbiter executable (graphics-server versions)
-install(TARGETS Orbiter	RUNTIME DESTINATION ${ORBITER_INSTALL_ROOT_DIR})
-
-# If the standard Orbiter executable is not built...
-set_target_properties(Orbiter PROPERTIES ENABLE_EXPORTS 1)
-
-# ...we have to use the NG version to export the API links
-install(FILES $<TARGET_LINKER_FILE:Orbiter>	DESTINATION ${ORBITER_INSTALL_SDK_DIR}/lib)
-
-# Copy library to its Orbitersdk/lib location so that external project integrated into the build can find it
-add_custom_command(TARGET ${OrbiterTgt}	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_BINARY_SDK_DIR}/lib
-	COMMAND ${CMAKE_COMMAND} -E copy ${ORBITER_LIB} ${ORBITER_BINARY_SDK_DIR}/lib/ 
+set(ORBITER_ICONSET ${CMAKE_CURRENT_BINARY_DIR}/Orbiter.iconset)
+set(ORBITER_ICNS ${CMAKE_CURRENT_BINARY_DIR}/Orbiter.icns)
+add_custom_command(OUTPUT ${ORBITER_ICNS}
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_ICONSET}
+	COMMAND sips -s format png ${CMAKE_CURRENT_SOURCE_DIR}/Orbiter.ico --out ${ORBITER_ICONSET}/icon_256x256.png > /dev/null
+	COMMAND sips -z 16 16 ${ORBITER_ICONSET}/icon_256x256.png --out ${ORBITER_ICONSET}/icon_16x16.png > /dev/null
+	COMMAND sips -z 32 32 ${ORBITER_ICONSET}/icon_256x256.png --out ${ORBITER_ICONSET}/icon_16x16@2x.png > /dev/null
+	COMMAND sips -z 32 32 ${ORBITER_ICONSET}/icon_256x256.png --out ${ORBITER_ICONSET}/icon_32x32.png > /dev/null
+	COMMAND sips -z 64 64 ${ORBITER_ICONSET}/icon_256x256.png --out ${ORBITER_ICONSET}/icon_32x32@2x.png > /dev/null
+	COMMAND sips -z 128 128 ${ORBITER_ICONSET}/icon_256x256.png --out ${ORBITER_ICONSET}/icon_128x128.png > /dev/null
+	COMMAND ${CMAKE_COMMAND} -E copy ${ORBITER_ICONSET}/icon_256x256.png ${ORBITER_ICONSET}/icon_128x128@2x.png
+	COMMAND iconutil -c icns ${ORBITER_ICONSET} -o ${ORBITER_ICNS}
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Orbiter.ico
 )
+set_source_files_properties(${ORBITER_ICNS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+string(TIMESTAMP ORBITER_BUNDLE_VERSION "%y.%m.%d")
+configure_file(${CMAKE_SOURCE_DIR}/cmake/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
+
+add_executable(Orbiter MACOSX_BUNDLE Main.cpp ${ORBITER_ICNS})
+set_target_properties(Orbiter
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_ROOT_DIR}
+	OUTPUT_NAME Orbiter
+	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
+	BUILD_RPATH "@executable_path/../../.."
+	INSTALL_RPATH "@executable_path/../../.."
+	FOLDER Core
+)
+target_link_libraries(Orbiter OrbiterCore)
+add_custom_command(TARGET Orbiter POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E create_symlink Orbiter.app/Contents/MacOS/Orbiter ${ORBITER_BINARY_ROOT_DIR}/Orbiter
+	COMMAND codesign --force --sign - ${ORBITER_BINARY_ROOT_DIR}/Orbiter.app > /dev/null 2>&1 || true
+)
+
+install(TARGETS Orbiter BUNDLE DESTINATION ${ORBITER_INSTALL_ROOT_DIR})
+install(TARGETS OrbiterCore LIBRARY DESTINATION ${ORBITER_INSTALL_ROOT_DIR})
 
 string(TIMESTAMP DATE "%d %b %Y")
 string(TIMESTAMP VERSION "%y%m%d")

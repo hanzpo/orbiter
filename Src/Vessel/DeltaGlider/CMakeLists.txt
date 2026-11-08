@@ -37,8 +37,6 @@ add_library(DeltaGlider SHARED
 	${VESSEL_COMMON_DIR}/Instrument.cpp
 	InstrVs.cpp
 	MomentInd.cpp
-	# Resources
-	DeltaGlider.rc
 )
 
 set_target_properties(DeltaGlider
@@ -56,7 +54,6 @@ target_include_directories(DeltaGlider
 target_link_libraries(DeltaGlider
 	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${ORBITER_DLGCTRL_LIB}
 	lua::lib
 	imgui
 )
@@ -118,7 +115,6 @@ add_custom_command(
 add_dependencies(DeltaGlider
 	${OrbiterTgt}
 	Orbitersdk
-	DlgCtrl
 	DeltaGlider_Prerequisites
 )
 
@@ -152,6 +148,4 @@ install(DIRECTORY ${THUMBNAIL_SOURCE_DIR}/
 )
 
 add_subdirectory(DGConfigurator)
-if(ORBITER_MAKE_DOC)
-	add_subdirectory(Help)
-endif()
+add_subdirectory(Help)

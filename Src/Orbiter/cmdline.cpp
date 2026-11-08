@@ -175,7 +175,10 @@ std::vector<::CommandLine::Key>& orbiter::CommandLine::KeyList() const
 		{ KEY_MAXSYSTIME, "maxsystime", 'T', true},
 		{ KEY_MAXSIMTIME, "maxsimtime", 't', true},
 		{ KEY_FRAMECOUNT, "maxframes", '_', true},
-		{ KEY_PLUGIN, "plugin", 'p', true}
+		{ KEY_PLUGIN, "plugin", 'p', true},
+		{ KEY_HIDDEN, "hidden", 'H', false},
+		{ KEY_CAPTURE, "capture", 'c', true},
+		{ KEY_CAPTURESKIP, "captureskip", 'k', true}
 	};
 	return keyList;
 }
@@ -230,18 +233,24 @@ void orbiter::CommandLine::ApplyOption(const Key* key, const std::string& value)
 	case KEY_PLUGIN:
 		cfg.LoadPlugins.push_back(value);
 		break;
+	case KEY_HIDDEN:
+		cfg.bHidden = true;
+		break;
+	case KEY_CAPTURE:
+		cfg.CaptureDir = value;
+		break;
+	case KEY_CAPTURESKIP:
+		res = sscanf(value.c_str(), "%zu", &s);
+		if (res == 1)
+			cfg.CaptureSkip = (int)s;
+		break;
 	}
 }
 
 void orbiter::CommandLine::PrintHelpAndExit() const
 {
-	// Get console output
-	if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole()) {
-		freopen("CONOUT$", "w", stdout);
-	}
-
 	std::cout << "\nOrbiter Space Flight Simulator" << std::endl;
-	std::cout << "orbiter.exe [options]\n\n";
+	std::cout << "Orbiter [options]\n\n";
 	std::cout << "Options:\n";
 	std::cout << "  --help, -h: Print this help page and exit.\n";
 	std::cout << "  --scenario=<scn>, -S <scn>: Launch scenario <scn>\n";
@@ -253,7 +262,10 @@ void orbiter::CommandLine::PrintHelpAndExit() const
 	std::cout << "  --maxsystime=<t>, -T <t>: Terminate session after <t> seconds\n";
 	std::cout << "  --maxsimtime=<t>, -t <t>: Terminate session at simulation time <t>\n";
 	std::cout << "  --maxframes=<f>: Terminate session after <f> time frames\n";
-	std::cout << "  --plugin=<pg>, -p <pg>: Load plugin <pg> (from Modules\\Plugin\\<pg>.dll)\n";
+	std::cout << "  --plugin=<pg>, -p <pg>: Load plugin <pg> (from Modules/Plugin/<pg>.dylib)\n";
+	std::cout << "  --hidden, -H: Run without showing the render window\n";
+	std::cout << "  --capture=<dir>, -c <dir>: Save rendered frames as PNG files in <dir>\n";
+	std::cout << "  --captureskip=<n>, -k <n>: Frames to skip between captures\n";
 	std::cout << std::endl;
 
 	exit(0);

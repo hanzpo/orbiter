@@ -39,3 +39,17 @@ install(FILES ${implot_SOURCE_DIR}/implot.h
 set(IMPLOT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 file(COPY ${implot_SOURCE_DIR}/implot.h DESTINATION ${IMPLOT_INCLUDE_DIR})
 target_include_directories(implot INTERFACE ${IMPLOT_INCLUDE_DIR})
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imconfig.h ${imgui_SOURCE_DIR}/imconfig.h COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/imconfig.h ${IMGUI_INCLUDE_DIR}/imconfig.h COPYONLY)
+
+add_custom_target(CopyImGuiFonts ALL
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_BINARY_ROOT_DIR}/Fonts
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		${imgui_SOURCE_DIR}/misc/fonts/Roboto-Medium.ttf
+		${CMAKE_CURRENT_SOURCE_DIR}/fa-solid-900.ttf
+		${imgui_SOURCE_DIR}/misc/fonts/Cousine-Regular.ttf
+		${CMAKE_CURRENT_SOURCE_DIR}/Lekton-Bold.ttf
+		${CMAKE_CURRENT_SOURCE_DIR}/architext.regular.ttf
+		${ORBITER_BINARY_ROOT_DIR}/Fonts/
+)

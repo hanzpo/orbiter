@@ -5,7 +5,7 @@
 #include <string>
 #include <windows.h>
 #include <direct.h>
-#include <Shlwapi.h>
+#include <filesystem>
 #include <zlib.h>
 
 #define TREE_DEFLATE 1
@@ -121,7 +121,7 @@ void MemTree::AddLevel(int lvl)
 {
 	char lvlpath[256];
 	sprintf(lvlpath, "%s\\%02d", path, lvl);
-	if (PathFileExists(lvlpath)) {
+	if (std::filesystem::exists(lvlpath)) {
 		WIN32_FIND_DATA fdata, fdata2;
 		strcat(lvlpath, "\\*");
 		HANDLE h = FindFirstFile(lvlpath, &fdata);
@@ -403,16 +403,17 @@ int TreeTOC::AddSubtree(const MemTreeNode *node)
 			LARGE_INTEGER sz;
 			DWORD ndata;
 			sprintf(path, "%s\\%s\\%02d\\%06d\\%06d.%s", root, layer, lvl, ilat, ilng, ext);
-			HANDLE hFile = CreateFile(path, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-			GetFileSizeEx(hFile, &sz);
+			FILE *hFile = fopen(path, "rb");
+			fseeko(hFile, 0, SEEK_END);
+			sz.QuadPart = ftello(hFile);
+			fseeko(hFile, 0, SEEK_SET);
 			if (sz.LowPart > nbuf) { // grow data buffer
 				BYTE *tmp = new BYTE[nbuf = sz.LowPart];
 				delete[]buf;
 				buf = tmp;
 			}
-			DWORD nread;
-			ReadFile(hFile, buf, sz.LowPart, &nread, NULL);
-			CloseHandle(hFile);
+			DWORD nread = (DWORD)::fread(buf, 1, sz.LowPart, hFile);
+			fclose(hFile);
 			if (nread < sz.LowPart) {
 				std::cerr << "Unexpected end of file" << std::endl;
 				exit(1);
@@ -504,16 +505,17 @@ void TreeTOC::WriteSubtreeData(const MemTreeNode *node, FILE *f)
 			LARGE_INTEGER sz;
 			DWORD ndata;
 			sprintf(path, "%s\\%s\\%02d\\%06d\\%06d.%s", root, layer, lvl, ilat, ilng, ext);
-			HANDLE hFile = CreateFile(path, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-			GetFileSizeEx(hFile, &sz);
+			FILE *hFile = fopen(path, "rb");
+			fseeko(hFile, 0, SEEK_END);
+			sz.QuadPart = ftello(hFile);
+			fseeko(hFile, 0, SEEK_SET);
 			if (sz.LowPart > nbuf) { // grow data buffer
 				BYTE *tmp = new BYTE[nbuf = sz.LowPart];
 				delete[]buf;
 				buf = tmp;
 			}
-			DWORD nread;
-			ReadFile(hFile, buf, sz.LowPart, &nread, NULL);
-			CloseHandle(hFile);
+			DWORD nread = (DWORD)::fread(buf, 1, sz.LowPart, hFile);
+			fclose(hFile);
 			if (nread < sz.LowPart) {
 				std::cerr << "Unexpected end of file" << std::endl;
 				exit(1);
@@ -692,7 +694,7 @@ bool exist_file(const char *root, const char *layer, const char *ext, int lvl, i
 {
 	char path[256];
 	sprintf(path, "%s\\%s\\%02d\\%06d\\%06d.%s", root, layer, lvl, ilat, ilng, ext);
-	return PathFileExists(path) == TRUE;
+	return std::filesystem::exists(path);
 }
 
 DWORD deflate_node_data(BYTE *inp, DWORD ninp, BYTE *outp, DWORD noutp)
@@ -726,7 +728,7 @@ DWORD deflate_node_data(BYTE *inp, DWORD ninp, BYTE *outp, DWORD noutp)
 
 DWORD inflate_node_data(BYTE *inp, DWORD ninp, BYTE *outp, DWORD noutp)
 {
-	DWORD ndata = noutp;
+	uLongf ndata = noutp;
 	if (uncompress(outp, &ndata, inp, ninp) != Z_OK)
 		return 0;
 #ifdef UNDEF
