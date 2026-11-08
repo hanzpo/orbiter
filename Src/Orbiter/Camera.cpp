@@ -140,8 +140,7 @@ void Camera::UpdateMouse ()
 	if (mbdown[1]) {
 		int dx, dy, x0, y0;
 		x0 = pt.x, y0 = pt.y;
-		if (!g_pOrbiter->IsFullscreen())
-			ScreenToClient (g_pOrbiter->GetRenderWnd(), &pt);
+		ScreenToClient (g_pOrbiter->GetRenderWnd(), &pt);
 		dx = pt.x - mx;
 		dy = pt.y - my;
 		SetCursorPos (x0-dx, y0-dy);

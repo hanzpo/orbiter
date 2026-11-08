@@ -29,10 +29,7 @@ Panel::Panel (int _id, const Pane *_pane, double _scale)
 	surf    = NULL;
 	visible = false;
 	has_ck  = false;
-	if (g_pOrbiter->IsFullscreen())
-		cwnd = 0;
-	else
-		cwnd = g_pOrbiter->GetRenderWnd();
+	cwnd = g_pOrbiter->GetRenderWnd();
 	narea   = nareabuf = 0;
 	idx_mfocus = aid_mfocus = mstate = 0;
 

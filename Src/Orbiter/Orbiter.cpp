@@ -2372,6 +2372,7 @@ LRESULT Orbiter::MsgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	// *** User Keyboard Input ***
 	case WM_CHAR:
 	case WM_KEYDOWN: {
+		if (!ImGui::GetCurrentContext()) break;
 		ImGuiIO& io = ImGui::GetIO();
 		bool imguiWantsKbd = io.WantCaptureKeyboard &&
 			(pConfig->CfgUIPrm.MouseFocusMode == 0 || io.WantCaptureMouse);
@@ -2385,7 +2386,7 @@ LRESULT Orbiter::MsgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_RBUTTONDOWN:
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP: {
-		if (ImGuiIO& io = ImGui::GetIO(); io.WantCaptureMouse) {
+		if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) {
 			return 0;
 		}
 
@@ -2393,7 +2394,7 @@ LRESULT Orbiter::MsgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break; //return 0;
 		} break;
 	case WM_MOUSEWHEEL: {
-		if (ImGuiIO& io = ImGui::GetIO(); io.WantCaptureMouse) {
+		if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) {
 			return 0;
 		}
 
@@ -2410,7 +2411,7 @@ LRESULT Orbiter::MsgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			if (!bKeepFocus && pConfig->CfgUIPrm.MouseFocusMode != 0 && GetFocus() != hWnd && GetFocus() != NULL)
 				SetFocus(hWnd);
 
-			if (ImGuiIO& io = ImGui::GetIO(); io.WantCaptureMouse) {
+			if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse) {
 				return 0;
 			}
 
