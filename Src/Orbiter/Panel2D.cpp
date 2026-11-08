@@ -38,8 +38,7 @@ Panel2D::Panel2D (int _id, Pane *_pane, double scale)
 	idx_mfocus = aid_mfocus = -1;
 	mstate = 0;
 
-	if (g_pOrbiter->IsFullscreen()) cwnd = 0;
-	else                            cwnd = g_pOrbiter->GetRenderWnd();
+	cwnd = g_pOrbiter->GetRenderWnd();
 
 	for (i = 0; i < 4; i++)
 		connect[i] = -1;

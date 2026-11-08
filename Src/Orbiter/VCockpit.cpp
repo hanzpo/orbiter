@@ -30,10 +30,7 @@ VirtualCockpit::VirtualCockpit (int _id, const Pane *_pane)
 	idx_mfocus = -1;
 	mstate     = 0;
 	hud.surf   = NULL;
-	if (g_pOrbiter->IsFullscreen())
-		cwnd = 0;
-	else
-		cwnd = g_pOrbiter->GetRenderWnd();
+	cwnd = g_pOrbiter->GetRenderWnd();
 	for (i = 0; i < 4; i++)
 		connect[i] = -1;
 }
