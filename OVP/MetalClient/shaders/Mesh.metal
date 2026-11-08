@@ -69,7 +69,7 @@ fragment float4 TinyMeshTechPS(MeshVS frg [[stage_in]], constant Globals &g [[bu
 	cTex.a *= g.gMtrlAlpha;
 
 	float  d = saturate(-dot(g.gSun.Dir, nrmW));
-	float  s = pow(saturate(dot(reflect(g.gSun.Dir, nrmW), CamW)), cSpec.a) * saturate(cSpec.a);
+	float  s = pow(max(saturate(dot(reflect(g.gSun.Dir, nrmW), CamW)), 1e-9f), cSpec.a) * saturate(cSpec.a);
 
 	if (d == 0) s = 0.0f;
 

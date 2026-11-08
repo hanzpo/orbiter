@@ -45,7 +45,7 @@ vertex BeaconVS BeaconArrayVS(BAVERTEX vrt [[stage_in]], constant Globals &g [[b
 
 	float dota    = -dot(normalize(posW), dirW);
 	float angl    = saturate((dota - vrt.data[1])/(1.0f-vrt.data[1]));
-	float disp    = pow(angl, vrt.dataB[1]);
+	float disp    = pow(max(angl, 1e-9f), vrt.dataB[1]);
 
 	float att0    = vrt.dataB[0] / (1.0f+dist*2e-4f);
 	float att1    = saturate(pow(att0, 2.0f));
@@ -62,7 +62,7 @@ vertex BeaconVS BeaconArrayVS(BAVERTEX vrt [[stage_in]], constant Globals &g [[b
 fragment float4 BeaconArrayPS(BeaconPS frg [[stage_in]], float2 tex0 [[point_coord]], constant Globals &g [[buffer(0)]], texture2d<float> gTex0 [[texture(0)]])
 {
 	float4 cTex = gTex0.sample(ClampS, tex0);
-	return float4(frg.colr.rgb, pow(abs(cTex.a), frg.haze) * frg.colr.a);
+	return float4(frg.colr.rgb, pow(max(abs(cTex.a), 1e-9f), frg.haze) * frg.colr.a);
 }
 
 
