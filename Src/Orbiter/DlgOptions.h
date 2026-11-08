@@ -32,6 +32,7 @@ public:
 	void DrawVessel();
 	void DrawUI();
 	void DrawJoystick();
+	void DrawKeyboard();
 	void DrawCelSphere();
 	void DrawVisHelper();
 	void DrawPlanetarium();
@@ -51,6 +52,7 @@ public:
 		{"Instruments & panels", "/tab_param.htm",      &DlgOptions::DrawInstrument},
 		{"Vessel settings",      "/tab_param.htm",      &DlgOptions::DrawVessel},
 		{"User interface",       "/tab_param.htm",      &DlgOptions::DrawUI},
+		{"      Keyboard",       "/tab_param.htm",      &DlgOptions::DrawKeyboard},
 		{"      Joystick",       "/tab_joystick.htm",   &DlgOptions::DrawJoystick},
 		{"Celestial sphere",     "/opt_celsphere.htm",  &DlgOptions::DrawCelSphere},
 		{"Visual helpers",       "/vishelper.htm",      &DlgOptions::DrawVisHelper},

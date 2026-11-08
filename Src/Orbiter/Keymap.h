@@ -21,6 +21,16 @@
 #define KMOD_LALT   0x1000
 #define KMOD_RALT   0x2000
 #define KMOD_ALT    (KMOD_LALT|KMOD_RALT)
+#define KMOD_CAPS   0x4000
+
+#include <string>
+
+enum KeyPreset {
+	KEYPRESET_ORBITER = 0,
+	KEYPRESET_MAC = 1,
+	KEYPRESET_CUSTOM = 2,
+	KEYPRESET_COUNT
+};
 
 class Keymap {
 public:
@@ -28,6 +38,19 @@ public:
 
 	void SetDefault ();
 	// set orbiter-default key mapping
+
+	void SetPreset (int preset);
+
+	void Load (int preset, const char *fname);
+
+	static const char *PresetName (int preset);
+	static int Count () { return LKEY_COUNT; }
+	static std::string FuncLabel (int lfunc);
+	std::string KeyLabel (int lfunc) const;
+
+	bool IsFlightKey (DWORD key, char *kstate) const;
+
+	bool SplitRCS () const;
 
 	bool Read (const char *fname);
 	// parse keymap table from file
@@ -45,6 +68,7 @@ public:
 
 private:
 	bool IsMatchingModifier (char *kstate, WORD key) const;
+	bool IsFlightFunc (int lfunc) const;
 
 	bool ScanStr (char *cbuf, WORD &key) const;
 	char *PrintStr (char *cbuf, WORD &key) const;

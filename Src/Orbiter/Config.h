@@ -242,6 +242,7 @@ struct CFG_UIPRM {              // user interface options
 	int    SelVesselTab;        // tab to open in vessel selection dialog
  	int    SelVesselRange;      // "nearby" range for vessel selection dialog
 	bool   bSelVesselFlat;      // flat assemblies for vessel selection dialog
+	int    KeyPreset;           // 0=Orbiter default, 1=Mac-optimized, 2=custom keymap.cfg
 };
 
 struct CFG_DEMOPRM {

@@ -164,6 +164,41 @@ void DlgOptions::DrawUI()
 	ImGui::RadioButton("Hybrid: Click required only for child windows", &g_pOrbiter->Cfg()->CfgUIPrm.MouseFocusMode, 1);
 	ImGui::RadioButton("Focus follows mouse", &g_pOrbiter->Cfg()->CfgUIPrm.MouseFocusMode, 2);
 }
+void DlgOptions::DrawKeyboard()
+{
+	int &preset = g_pOrbiter->Cfg()->CfgUIPrm.KeyPreset;
+	Keymap &km = g_pOrbiter->keymap;
+
+	ImGui::SeparatorText("Key preset");
+	if (ImGui::BeginAnimatedCombo("##keypreset", Keymap::PresetName(preset))) {
+		for (int n = 0; n < KEYPRESET_COUNT; n++) {
+			const bool is_selected = (preset == n);
+			if (ImGui::Selectable(Keymap::PresetName(n), is_selected)) {
+				preset = n;
+				km.Load(preset, "keymap.cfg");
+			}
+			if (is_selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndAnimatedCombo();
+	}
+	if (preset == KEYPRESET_CUSTOM)
+		ImGui::TextWrapped("Edit keymap.cfg in the Orbiter folder, then choose this preset again to reload it.");
+
+	ImGui::SeparatorText("Bindings");
+	if (ImGui::BeginTable("##keys", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_ScrollY)) {
+		for (int i = 0; i < Keymap::Count(); i++) {
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted(Keymap::FuncLabel(i).c_str());
+			ImGui::TableNextColumn();
+			std::string key = km.KeyLabel(i);
+			ImGui::TextUnformatted(key.empty() ? "Unbound" : key.c_str());
+		}
+		ImGui::EndTable();
+	}
+}
+
 void DlgOptions::DrawJoystick()
 {
 	ImGui::SeparatorText("Joystick device");
