@@ -107,6 +107,18 @@ float Scale(HWND hWnd)
 	return hWnd && hWnd->window ? (float)hWnd->window.backingScaleFactor : 1.0f;
 }
 
+NSSize ClientScale(HWND hWnd)
+{
+	float s = Scale(hWnd);
+	if (!hWnd) return NSMakeSize(s, s);
+	NSView *view = (NSView *)hWnd->view;
+	if (!view || ![view.layer isKindOfClass:[CAMetalLayer class]]) return NSMakeSize(s, s);
+	NSSize b = view.bounds.size;
+	CGSize d = ((CAMetalLayer *)view.layer).drawableSize;
+	if (b.width < 1 || b.height < 1 || d.width < 1 || d.height < 1) return NSMakeSize(s, s);
+	return NSMakeSize(d.width / b.width, d.height / b.height);
+}
+
 double MainScreenHeight()
 {
 	NSScreen *s = [NSScreen screens].firstObject;
@@ -149,10 +161,23 @@ void ApplyCursorVisibility()
 
 @interface OPWindow : NSWindow
 @property (nonatomic, assign) BOOL keyable;
+@property (nonatomic, assign) BOOL pendingFullScreen;
 @end
+
+bool g_headless = false;
 
 @implementation OPWindow
 - (BOOL)canBecomeKeyWindow { return self.keyable || [super canBecomeKeyWindow]; }
+- (void)orderWindow:(NSWindowOrderingMode)place relativeTo:(NSInteger)other
+{
+	if (g_headless && place != NSWindowOut) return;
+	[super orderWindow:place relativeTo:other];
+	if (place == NSWindowOut || !self.pendingFullScreen) return;
+	self.pendingFullScreen = NO;
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (!(self.styleMask & NSWindowStyleMaskFullScreen)) [self toggleFullScreen:nil];
+	});
+}
 @end
 
 @interface OPView : NSView <NSTextInputClient>
@@ -217,8 +242,8 @@ void ApplyCursorVisibility()
 - (LPARAM)mouseLParam:(NSEvent *)e
 {
 	NSPoint p = [self convertPoint:e.locationInWindow fromView:nil];
-	float s = Scale(self.owner);
-	return MAKELPARAM((short)(p.x * s), (short)(p.y * s));
+	NSSize s = ClientScale(self.owner);
+	return MAKELPARAM((short)(p.x * s.width), (short)(p.y * s.height));
 }
 
 - (void)mouseMsg:(NSEvent *)e msg:(UINT)msg
@@ -445,12 +470,14 @@ void Init()
 	done = true;
 	@autoreleasepool {
 		[NSApplication sharedApplication];
-		[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+		for (NSString *a in [NSProcessInfo processInfo].arguments)
+			if ([a isEqualToString:@"-H"] || [a isEqualToString:@"--hidden"]) g_headless = true;
+		[NSApp setActivationPolicy:g_headless ? NSApplicationActivationPolicyProhibited : NSApplicationActivationPolicyRegular];
 		g_appDelegate = [[OPAppDelegate alloc] init];
 		NSApp.delegate = g_appDelegate;
 		BuildMenu();
 		[NSApp finishLaunching];
-		[NSApp activateIgnoringOtherApps:YES];
+		if (!g_headless) [NSApp activateIgnoringOtherApps:YES];
 		CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);
 		if (src) {
 			CGEventSourceSetLocalEventsSuppressionInterval(src, 0.0);
@@ -515,7 +542,7 @@ HWND OpenBackdropWindow()
 	HWND h = new HWND__;
 	@autoreleasepool {
 		NSScreen *screen = NSScreen.mainScreen;
-		NSWindow *w = [[NSWindow alloc] initWithContentRect:screen.frame styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
+		OPWindow *w = [[OPWindow alloc] initWithContentRect:screen.frame styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
 		w.releasedWhenClosed = NO;
 		w.backgroundColor = NSColor.blackColor;
 		w.ignoresMouseEvents = YES;
@@ -665,9 +692,15 @@ bool IsFullscreen(HWND hWnd) { return hWnd && hWnd->fullscreen; }
 void SetFullscreen(HWND hWnd, bool fullscreen)
 {
 	if (!hWnd || !hWnd->window) return;
+	hWnd->fullscreen = fullscreen;
+	OPWindow *w = [hWnd->window isKindOfClass:[OPWindow class]] ? (OPWindow *)hWnd->window : nil;
+	if (w) w.pendingFullScreen = NO;
+	if (!hWnd->window.visible) {
+		if (w && fullscreen) w.pendingFullScreen = YES;
+		return;
+	}
 	bool cur = (hWnd->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
 	if (cur != fullscreen) [hWnd->window toggleFullScreen:nil];
-	hWnd->fullscreen = fullscreen;
 }
 
 void SetMinClientSize(HWND hWnd, int w, int h)
@@ -1001,17 +1034,17 @@ WINBOOL ScreenToClient(HWND hWnd, POINT *pt)
 	NSPoint scr = NSMakePoint(pt->x / sc, MainScreenHeight() - pt->y / sc);
 	NSPoint win = [hWnd->window convertPointFromScreen:scr];
 	NSPoint v = [hWnd->view convertPoint:win fromView:nil];
-	float s = Scale(hWnd);
-	pt->x = (LONG)(v.x * s);
-	pt->y = (LONG)(v.y * s);
+	NSSize s = ClientScale(hWnd);
+	pt->x = (LONG)(v.x * s.width);
+	pt->y = (LONG)(v.y * s.height);
 	return TRUE;
 }
 
 WINBOOL ClientToScreen(HWND hWnd, POINT *pt)
 {
 	if (!hWnd || !hWnd->view) return FALSE;
-	float s = Scale(hWnd);
-	NSPoint v = NSMakePoint(pt->x / s, pt->y / s);
+	NSSize s = ClientScale(hWnd);
+	NSPoint v = NSMakePoint(pt->x / s.width, pt->y / s.height);
 	NSPoint win = [hWnd->view convertPoint:v toView:nil];
 	NSPoint scr = [hWnd->window convertPointToScreen:win];
 	CGFloat sc = NSScreen.mainScreen.backingScaleFactor;
@@ -1097,7 +1130,7 @@ HWND GetForegroundWindow(void) { return GetFocus(); }
 WINBOOL SetForegroundWindow(HWND hWnd)
 {
 	if (!IsWindow(hWnd)) return FALSE;
-	[NSApp activateIgnoringOtherApps:YES];
+	if (!g_headless) [NSApp activateIgnoringOtherApps:YES];
 	[hWnd->window makeKeyAndOrderFront:nil];
 	return TRUE;
 }
