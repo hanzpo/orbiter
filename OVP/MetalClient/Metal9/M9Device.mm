@@ -223,15 +223,27 @@ id<MTLCommandBuffer> Device::Cmd()
 
 void Device::EndEncoders()
 {
-	if (renc) {
-		[renc endEncoding];
-		renc = nil;
-	}
+	EndRenderEncoder();
 	if (benc) {
 		[benc endEncoding];
 		benc = nil;
 	}
 	passDirty = true;
+}
+
+// D3D9 regenerates the mip chain of a D3DUSAGE_AUTOGENMIPMAP render target after it is
+// rendered to. Metal does not, so without this the sub-levels stay uninitialised (NaN in
+// practice) and any shader sampling with implicit LOD picks them up.
+void Device::EndRenderEncoder()
+{
+	if (!renc) return;
+	[renc endEncoding];
+	renc = nil;
+	if (passMipTargets.empty()) return;
+	id<MTLBlitCommandEncoder> b = [Cmd() blitCommandEncoder];
+	for (id<MTLTexture> t : passMipTargets) [b generateMipmapsForTexture:t];
+	[b endEncoding];
+	passMipTargets.clear();
 }
 
 void Device::Submit(bool wait)
@@ -408,15 +420,16 @@ id<MTLRenderCommandEncoder> Device::RenderEncoder()
 		[benc endEncoding];
 		benc = nil;
 	}
-	if (renc) {
-		[renc endEncoding];
-		renc = nil;
-	}
+	EndRenderEncoder();
 	for (int i = 0; i < 4; i++) {
 		Surface *s = SurfImpl(rt[i]);
 		if (!s) continue;
 		if (pendingClear && (clearFlags & D3DCLEAR_TARGET)) s->tex->msaaDirty = false;
 		RefreshMSAA(s->tex);
+		Texture *t = s->tex;
+		if ((t->usage & D3DUSAGE_AUTOGENMIPMAP) && s->level == 0 && t->levels > 1 && t->tex &&
+			t->fi->kind != FK_COMPRESSED && t->fi->kind != FK_DEPTH)
+			passMipTargets.push_back(t->tex);
 	}
 	renc = [Cmd() renderCommandEncoderWithDescriptor:PassDescriptor()];
 	passDirty = false;
@@ -444,8 +457,7 @@ id<MTLBlitCommandEncoder> Device::BlitEncoder()
 {
 	if (benc) return benc;
 	if (renc) {
-		[renc endEncoding];
-		renc = nil;
+		EndRenderEncoder();
 		passDirty = true;
 	}
 	benc = [Cmd() blitCommandEncoder];

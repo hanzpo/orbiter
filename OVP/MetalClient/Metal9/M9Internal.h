@@ -320,6 +320,8 @@ struct Device {
 
 	id<MTLCommandBuffer> Cmd();
 	id<MTLRenderCommandEncoder> RenderEncoder();
+	void EndRenderEncoder();               // ends renc, then regenerates mips of its AUTOGENMIPMAP targets
+	std::vector<id<MTLTexture>> passMipTargets; // AUTOGENMIPMAP textures rendered at level 0 by renc
 	id<MTLBlitCommandEncoder> BlitEncoder();
 	// Encode a blit; from threads other than the device thread it runs in its own command buffer
 	void EncodeBlit(void (^fn)(id<MTLBlitCommandEncoder>), bool wait = false);
