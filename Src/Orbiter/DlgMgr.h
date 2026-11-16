@@ -97,6 +97,8 @@ public:
 	ImFont *GetFont(ImGuiFont f);
 
 	void SetMainColor(COLORREF col);
+	void RegisterAnnotation(oapi::ScreenAnnotation *);
+	void UnregisterAnnotation(oapi::ScreenAnnotation *);
 private:
 	void InitImGui();
 	void ShutdownImGui();
@@ -104,6 +106,7 @@ private:
 	ImFont *consoleFont;
 	ImFont *monoFont;
 	ImFont *manuscriptFont;
+	std::list<oapi::ScreenAnnotation *>annotations;
 };
 
 #endif // !__DLGMGR_H

@@ -204,6 +204,10 @@ void DialogManager::ImGuiNewFrame()
 	ImGui_ImplOrbiter_NewFrame();
 	ImGui::NewFrame();
 
+	for(auto &annotation: annotations) {
+		annotation->Render();
+	}
+
 	// Focus-follows-mouse: when the mouse is not over any ImGui window,
 	// clear ImGui's internal focused window. Without this, clicking an
 	// ImGui window permanently sets WantCaptureKeyboard (due to
@@ -246,6 +250,17 @@ void DialogManager::SetMainColor(COLORREF col)
     ImVec4 color = ImVec4((col & 0xff) / 255.0f, ((col >> 8) & 0xff) / 255.0f, (col >> 16)/255.0f, 1.0f);
     ApplyGlowTheme(color);
 }
+
+void DialogManager::RegisterAnnotation(oapi::ScreenAnnotation *an)
+{
+	annotations.push_back(an);
+}
+
+void DialogManager::UnregisterAnnotation(oapi::ScreenAnnotation *an)
+{
+	annotations.remove(an);
+}
+
 
 ImGuiDialog::~ImGuiDialog(){
 	// Make sure this dialog is no longer referenced in the DialogManager
@@ -295,7 +310,7 @@ Added:
 
 MIT License
 
-Copyright (c) 2021-2026 Patrick
+Copyright (c) 2021 Patrick
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
